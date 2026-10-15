@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Играч – CodeWeek Escape Room</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>💻 CodeWeek 2026 – Escape Room</h1>
+  <p>Уеб програмиране | ПГЕЕ – Пловдив</p>
+  <p><a href="index.html" class="back-link">← Начало</a></p>
+</header>
+
+<div class="container">
+
+  <!-- ЕКРАН 1: ВХОД -->
+  <div id="screen-login" class="card highlight fade-in">
+    <h2>🎮 Влез в играта</h2>
+    <p class="info-line">Въведи своето име, за да се включиш:</p>
+    <input type="text" id="player-name" placeholder="Твоето име..." maxlength="30"
+           autocomplete="off" autocapitalize="words">
+    <div class="text-center mt-2">
+      <button onclick="registerPlayer()">▶ Влез</button>
+    </div>
+    <p id="error-msg" style="color:#ff4444; text-align:center; margin-top:10px;"></p>
+  </div>
+
+  <!-- ЕКРАН 2: ЧАКАЛНЯ -->
+  <div id="screen-waiting" class="card hidden fade-in">
+    <h2>⏳ Изчакване...</h2>
+    <p class="info-line">Ти си в играта, <span id="my-name" style="color:#00ff99;"></span>!</p>
+    <p class="info-line">Изчакай учителят да стартира играта.</p>
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+    <div id="waiting-players" class="players-grid"></div>
+  </div>
+
+  <!-- ЕКРАН 3: ВЪПРОС -->
+  <div id="screen-question" class="hidden">
+    <div class="info-line">Въпрос <span id="q-number">1</span>/<span id="q-total">10</span></div>
+    <div class="card highlight">
+      <h2 id="question-text"></h2>
+      <div class="timer" id="timer">20</div>
+      <div class="answers" id="answers"></div>
+    </div>
+    <p id="feedback" class="text-center mt-1" style="font-size:1.2rem;"></p>
+  </div>
+
+  <!-- ЕКРАН 4: КРАЙ -->
+  <div id="screen-end" class="card hidden fade-in">
+    <h2>🏁 Играта приключи!</h2>
+    <p class="info-line">Благодарим за участието, <span id="end-name" style="color:#00ff99;"></span>!</p>
+    <div id="final-rank"></div>
+    <div class="text-center mt-2">
+      <a href="index.html" class="btn-link">← Към началото</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// Същият origin → io() работи без аргументи
+const socket = io();
+
+let myName = null;
+let currentQuestionIndex = -1;
+let timeLeft = 20;
+let answered = false;
+
+// ============================================================
+// ЗВУК
+// ============================================================
+function beep(freq, duration = 100, type = 'sine') {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
+    osc.start();
+    osc.stop(ctx.currentTime + duration / 1000);
+  } catch (e) {}
+}
+const soundCorrect = () => { beep(880, 100); setTimeout(() => beep(1320, 150), 100); };
+const soundWrong   = () => { beep(200, 300, 'sawtooth'); };
+const soundTick    = () => { beep(1500, 30, 'square'); };
+const soundStart   = () => { beep(440, 100); setTimeout(() => beep(660, 100), 100); setTimeout(() => beep(880, 200), 200); };
+
+// ============================================================
+// РЕГИСТРАЦИЯ
+// ============================================================
+function registerPlayer() {
+  const name = document.getElementById('player-name').value.trim();
+  if (!name) {
+    document.getElementById('error-msg').textContent = 'Въведи име!';
+    return;
+  }
+  socket.emit('register', name);
+}
+
+document.getElementById('player-name').addEventListener('keypress', e => {
+  if (e.key === 'Enter') registerPlayer();
+});
+
+socket.on('registered', (name) => {
+  myName = name;
+  document.getElementById('my-name').textContent = name;
+  document.getElementById('end-name').textContent = name;
+  showScreen('screen-waiting');
+});
+
+socket.on('error-msg', (msg) => {
+  // Показваме грешката на активния екран
+  const err1 = document.getElementById('error-msg');
+  if (err1) err1.textContent = msg;
+});
+
+// ============================================================
+// СПИСЪК ИГРАЧИ
+// ============================================================
+socket.on('players-update', (players) => {
+  const el = document.getElementById('waiting-players');
+  if (!el) return;
+  el.innerHTML = players.map(p =>
+    `<span class="player-chip ${p.name === myName ? 'me' : ''}">👤 ${p.name}</span>`
+  ).join('') || '<span style="color:#8b949e;">Очакване на играчи...</span>';
+});
+
+// ============================================================
+// СТАРТ НА ИГРАТА
+// ============================================================
+socket.on('game-started', () => {
+  soundStart();
+  showScreen('screen-question');
+});
+
+// ============================================================
+// ПОЛУЧАВАНЕ НА ВЪПРОС
+// ============================================================
+socket.on('question', (data) => {
+  currentQuestionIndex = data.index;
+  answered = false;
+  timeLeft = data.timeLimit;
+
+  document.getElementById('q-number').textContent = data.index + 1;
+  document.getElementById('q-total').textContent = data.total || 10;
+  document.getElementById('question-text').textContent = data.text;
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('timer').textContent = timeLeft;
+  document.getElementById('timer').classList.remove('warning');
+
+  const answersEl = document.getElementById('answers');
+  answersEl.innerHTML = '';
+  data.answers.forEach((ans, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'answer-btn';
+    btn.innerHTML = String.fromCharCode(65 + i) + ') ' + ans;
+    btn.onclick = () => selectAnswer(i, btn);
+    answersEl.appendChild(btn);
+  });
+
+  showScreen('screen-question');
+});
+
+// ============================================================
+// ТАЙМЕР
+// ============================================================
+socket.on('timer', (time) => {
+  timeLeft = time;
+  const el = document.getElementById('timer');
+  if (!el) return;
+  el.textContent = time;
+  if (time <= 5 && time > 0) {
+    el.classList.add('warning');
+    soundTick();
+  }
+});
+
+// ============================================================
+// ИЗБОР НА ОТГОВОР
+// ============================================================
+function selectAnswer(index, btn) {
+  if (answered) return;
+  answered = true;
+
+  document.querySelectorAll('.answer-btn').forEach(b => b.disabled = true);
+  btn.classList.add('selected');
+
+  socket.emit('answer', {
+    questionIndex: currentQuestionIndex,
+    answerIndex: index,
+    timeLeft: timeLeft
+  });
+}
+
+socket.on('answer-feedback', ({ correct, correctIndex }) => {
+  const buttons = document.querySelectorAll('.answer-btn');
+  buttons.forEach((b, i) => {
+    if (i === correctIndex) b.classList.add('correct');
+    if (i !== correctIndex) b.disabled = true;
+  });
+
+  if (correct) {
+    soundCorrect();
+    document.getElementById('feedback').textContent = '✅ Верен отговор! +точки';
+    document.getElementById('feedback').style.color = '#00ff99';
+  } else {
+    soundWrong();
+    document.getElementById('feedback').textContent = '❌ Грешен отговор!';
+    document.getElementById('feedback').style.color = '#ff4444';
+  }
+});
+
+// ============================================================
+// МЕЖДУ ВЪПРОСИТЕ
+// ============================================================
+socket.on('between-questions', () => {
+  document.getElementById('feedback').textContent = '⏭ Следващ въпрос...';
+  document.getElementById('feedback').style.color = '#ffcc00';
+});
+
+// ============================================================
+// КРАЙ НА ИГРАТА
+// ============================================================
+socket.on('game-over', (sorted) => {
+  showScreen('screen-end');
+  const myRank = sorted.findIndex(p => p.name === myName) + 1;
+  const me = sorted.find(p => p.name === myName);
+
+  let rankHtml = '<table class="leaderboard"><thead><tr><th>Място</th><th>Играч</th><th>Точки</th></tr></thead><tbody>';
+  sorted.forEach((p, i) => {
+    const cls = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+    const highlight = p.name === myName ? 'style="background:#21262d;"' : '';
+    rankHtml += `<tr class="${cls}" ${highlight}><td>${i + 1}</td><td>${p.name}</td><td>${p.score}</td></tr>`;
+  });
+  rankHtml += '</tbody></table>';
+
+  document.getElementById('final-rank').innerHTML =
+    `<p class="info-line">Твоето място: <b style="color:#00ff99;">${myRank}</b> от ${sorted.length} с ${me ? me.score : 0} точки</p>` +
+    rankHtml;
+
+  // Звук за победа
+  if (myRank === 1) {
+    [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 200), i * 150));
+  }
+});
+
+// ============================================================
+// НУЛИРАНЕ
+// ============================================================
+socket.on('game-reset', () => {
+  myName = null;
+  document.getElementById('player-name').value = '';
+  document.getElementById('error-msg').textContent = '';
+  showScreen('screen-login');
+});
+
+// ============================================================
+// ПОМОЩНА ФУНКЦИЯ
+// ============================================================
+function showScreen(id) {
+  ['screen-login', 'screen-waiting', 'screen-question', 'screen-end'].forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.classList.add('hidden');
+  });
+  const target = document.getElementById(id);
+  if (target) target.classList.remove('hidden');
+}
+</script>
+
+</body>
+</html>
