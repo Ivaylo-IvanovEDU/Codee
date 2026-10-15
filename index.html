@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeWeek 2026 – Escape Room | Начало</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>💻 CodeWeek 2026 – Escape Room</h1>
+  <p>Уеб програмиране | ПГЕЕ – Пловдив</p>
+</header>
+
+<div class="container">
+
+  <!-- ЕКРАН 1: ИНФОРМАЦИЯ + ИЗБОР НА РОЛЯ -->
+  <div id="screen-info" class="card highlight fade-in">
+    <h2>🎮 Добре дошли в Escape Room играта!</h2>
+
+    <p class="info-line">
+      <b>CodeWeek 2026 – Escape Room по Уеб програмиране</b><br>
+      Разработена от инж. Ивайло Иванов, учител по практическо обучение в ПГЕЕ – гр. Пловдив
+    </p>
+
+    <p class="info-line">
+      Учебен предмет: <b>Уеб програмиране</b><br>
+      РПП 11д клас | Специалност: Компютърна техника и технологии
+    </p>
+
+    <hr style="border:0; border-top:1px solid #21262d; margin:20px 0;">
+
+    <h3 style="text-align:center; color:#00ff99;">📋 Как се играе?</h3>
+    <ul class="info-line" style="line-height:1.8;">
+      <li>🧑‍🏫 <b>Учителят</b> стартира играта и управлява въпросите.</li>
+      <li>👤 <b>Учениците</b> се включват с име и отговарят на въпроси в реално време.</li>
+      <li>⏱ За всеки верен отговор се печелят точки – по-бърз отговор = повече точки.</li>
+      <li>🏆 Накрая се показва класирането на всички играчи.</li>
+    </ul>
+
+    <hr style="border:0; border-top:1px solid #21262d; margin:20px 0;">
+
+    <p class="info-line" style="text-align:center;">
+      <b>Избери своята роля, за да продължиш:</b>
+    </p>
+
+    <div class="role-grid">
+      <button class="role-btn" onclick="chooseRole('student')">
+        <span class="role-emoji">👤</span>
+        <span class="role-title">Ученик</span>
+        <span class="role-desc">Включи се в играта</span>
+      </button>
+
+      <button class="role-btn" onclick="chooseRole('teacher')">
+        <span class="role-emoji">🧑‍🏫</span>
+        <span class="role-title">Учител</span>
+        <span class="role-desc">Изисква се код за достъп</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ЕКРАН 2: КОД ЗА УЧИТЕЛ -->
+  <div id="screen-teacher-code" class="card hidden fade-in">
+    <h2>🔐 Учителски достъп</h2>
+    <p class="info-line">Въведи кода за достъп, за да влезеш в панела на учителя:</p>
+
+    <input type="password" id="teacher-code-input" placeholder="Код за достъп..." maxlength="30"
+           autocomplete="off" style="letter-spacing:3px; text-align:center;">
+
+    <div class="text-center mt-2">
+      <button onclick="verifyTeacherCode()">🔓 Влез</button>
+      <button class="danger" onclick="showInfo()">← Назад</button>
+    </div>
+
+    <p id="teacher-error" style="color:#ff4444; text-align:center; margin-top:10px;"></p>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// 🔑 КОД ЗА УЧИТЕЛСКИ ДОСТЪП
+// Смени стойността с твой собствен код!
+// ============================================================
+const TEACHER_CODE = "CodeWeek2026";
+
+// ============================================================
+// НАВИГАЦИЯ
+// ============================================================
+function chooseRole(role) {
+  if (role === 'student') {
+    window.location.href = 'students.html';
+  } else if (role === 'teacher') {
+    showScreen('screen-teacher-code');
+    document.getElementById('teacher-code-input').focus();
+  }
+}
+
+function showInfo() {
+  document.getElementById('teacher-error').textContent = '';
+  document.getElementById('teacher-code-input').value = '';
+  showScreen('screen-info');
+}
+
+// ============================================================
+// ПРОВЕРКА НА КОДА
+// ============================================================
+function verifyTeacherCode() {
+  const input = document.getElementById('teacher-code-input').value.trim();
+  const errorEl = document.getElementById('teacher-error');
+
+  if (!input) {
+    errorEl.textContent = 'Въведи код!';
+    return;
+  }
+
+  if (input === TEACHER_CODE) {
+    // Запомня ролята за текущата сесия (не е задължително, но е удобно)
+    try { sessionStorage.setItem('role', 'teacher'); } catch (e) {}
+    window.location.href = 'teacher.html';
+  } else {
+    errorEl.textContent = '❌ Грешен код! Опитай отново.';
+    document.getElementById('teacher-code-input').value = '';
+  }
+}
+
+// Enter в полето за код → проверка
+document.getElementById('teacher-code-input').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') verifyTeacherCode();
+});
+
+// ============================================================
+// ПОМОЩНА ФУНКЦИЯ
+// ============================================================
+function showScreen(id) {
+  ['screen-info', 'screen-teacher-code'].forEach(s => {
+    document.getElementById(s).classList.add('hidden');
+  });
+  document.getElementById(id).classList.remove('hidden');
+}
+</script>
+
+</body>
+</html>

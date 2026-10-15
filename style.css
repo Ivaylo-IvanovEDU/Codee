@@ -1,0 +1,52 @@
+/* ============================================================
+   ИЗБОР НА РОЛЯ (index.html)
+   ============================================================ */
+.role-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+@media (max-width: 600px) {
+  .role-grid { grid-template-columns: 1fr; }
+}
+
+.role-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 28px 16px;
+  background: #161b22;
+  border: 2px solid #21262d;
+  border-radius: 12px;
+  color: #c9d1d9;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.role-btn:hover {
+  border-color: #00ff99;
+  background: #1c2128;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 255, 153, 0.15);
+}
+
+.role-emoji {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.role-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #00ff99;
+}
+
+.role-desc {
+  font-size: 0.85rem;
+  color: #8b949e;
+}
