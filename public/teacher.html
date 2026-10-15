@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Учител – CodeWeek Escape Room</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>💻 CodeWeek 2026 — Escape Room по Уеб програмиране</h1>
+  <p>Разработена от инж. Ивайло Иванов, учител по практическо обучение в ПГЕЕ – гр. Пловдив</p>
+  <p>Учебен предмет: Уеб програмиране | РПП 11д клас | Специалност: Компютърна техника и технологии</p>
+  <p><a href="index.html" class="back-link">← Начало</a></p>
+</header>
+
+<div class="container">
+
+  <div class="grid-2">
+
+    <!-- ЛЯВА КОЛОНА -->
+    <div>
+      <!-- QR + статус -->
+      <div class="card highlight">
+        <h2>📱 Вход за ученици</h2>
+        <div class="text-center">
+          <div class="qr-box" id="qr-container"></div>
+        </div>
+        <p class="info-line">Сканирай с телефон или отвори:</p>
+        <p class="info-line"><b id="player-url" style="color:#00ff99; word-break:break-all;"></b></p>
+      </div>
+
+      <!-- Контроли -->
+      <div class="card">
+        <h2>🎛 Контроли</h2>
+        <div class="text-center">
+          <button id="btn-start" onclick="startGame()">▶ Стартирай играта</button>
+          <button id="btn-skip" class="danger hidden" onclick="skipQuestion()">⏭ Пропусни въпрос</button>
+          <button id="btn-reset" class="danger" onclick="resetGame()">🔄 Нулирай</button>
+          <button id="btn-csv" onclick="exportCSV()">📥 CSV експорт</button>
+        </div>
+        <p id="status-msg" class="info-line mt-1"></p>
+      </div>
+
+      <!-- Играчи -->
+      <div class="card">
+        <h2>👥 Играчи (<span id="player-count">0</span>)</h2>
+        <div id="players-list" class="players-grid"></div>
+      </div>
+
+      <!-- Текущ въпрос -->
+      <div class="card" id="current-q-card">
+        <h2>📖 Текущ въпрос</h2>
+        <p id="current-q-text" class="info-line">—</p>
+        <div class="timer" id="timer">—</div>
+        <p class="info-line"><span id="answered-count">0</span> / <span id="total-players">0</span> отговорили</p>
+      </div>
+
+      <div class="card">
+        <h2>📚 Последователност на въпросите</h2>
+        <p class="info-line">Всички въпроси и възможни отговори в реда, в който ще се появят.</p>
+        <div id="question-outline" class="question-outline" aria-live="polite">
+          <p class="info-line">Зареждане на въпросите...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ДЯСНА КОЛОНА -->
+    <div>
+      <!-- Класиране в реално време -->
+      <div class="card highlight">
+        <h2>🏆 Класиране в реално време</h2>
+        <table class="leaderboard" id="live-leaderboard">
+          <thead><tr><th>#</th><th>Играч</th><th>Точки</th><th>Верни</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- Лог на отговорите -->
+      <div class="card">
+        <h2>📋 Лог на отговорите</h2>
+        <div style="max-height:400px; overflow-y:auto;">
+          <table class="leaderboard" id="log-table">
+            <thead><tr><th>Играч</th><th>Въпрос</th><th>Резултат</th><th>Време</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// Същият origin → io() работи без аргументи
+const socket = io();
+let currentQuizQuestionIndex = -1;
+
+function updateCurrentQuestionOutline(index, scrollToCurrent = false) {
+  currentQuizQuestionIndex = index;
+  const items = document.querySelectorAll('.question-outline-item');
+  let activeItem = null;
+
+  items.forEach((item) => {
+    const isCurrent = Number(item.dataset.questionIndex) === index;
+    item.classList.toggle('is-current', isCurrent);
+    if (isCurrent) activeItem = item;
+  });
+
+  if (scrollToCurrent && activeItem) {
+    activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+function renderQuizOutline(questions) {
+  const container = document.getElementById('question-outline');
+  container.replaceChildren();
+
+  if (!questions || questions.length === 0) {
+    const p = document.createElement('p');
+    p.className = 'info-line';
+    p.textContent = 'Няма заредени въпроси.';
+    container.appendChild(p);
+    return;
+  }
+
+  questions.forEach((question, index) => {
+    const item = document.createElement('article');
+    item.className = 'question-outline-item';
+    item.dataset.questionIndex = index;
+
+    const heading = document.createElement('div');
+    heading.className = 'question-outline-heading';
+
+    const title = document.createElement('h3');
+    title.textContent = `Въпрос ${index + 1}`;
+
+    const currentLabel = document.createElement('span');
+    currentLabel.className = 'question-outline-current';
+    currentLabel.textContent = 'ТЕКУЩ';
+
+    heading.append(title, currentLabel);
+
+    const prompt = document.createElement('p');
+    prompt.className = 'question-outline-text';
+    prompt.textContent = question.q;
+
+    const answers = document.createElement('ol');
+    answers.className = 'question-outline-answers';
+    answers.type = 'A';
+
+    question.a.forEach((answer) => {
+      const option = document.createElement('li');
+      option.textContent = answer;
+      answers.appendChild(option);
+    });
+
+    item.append(heading, prompt, answers);
+    container.appendChild(item);
+  });
+
+  updateCurrentQuestionOutline(currentQuizQuestionIndex);
+}
+
+// ============================================================
+// SOCKET: свързване + опис на въпросите
+// ============================================================
+socket.on('connect', () => {
+  console.log('✅ Свързан към сървъра');
+  socket.emit('request-quiz-outline');
+});
+
+socket.on('quiz-outline', ({ questions, currentQuestion }) => {
+  renderQuizOutline(questions);
+  updateCurrentQuestionOutline(currentQuestion);
+});
+
+// ============================================================
+// QR КОД
+// ============================================================
+const playerUrl = window.location.origin + '/students.html';
+document.getElementById('player-url').textContent = playerUrl;
+new QRCode(document.getElementById('qr-container'), {
+  text: playerUrl,
+  width: 220,
+  height: 220,
+  colorDark: "#0d1117",
+  colorLight: "#ffffff"
+});
+
+// ============================================================
+// ЗВУК
+// ============================================================
+function beep(freq, duration = 150, type = 'sine') {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type; osc.frequency.value = freq;
+    osc.connect(gain); gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
+    osc.start(); osc.stop(ctx.currentTime + duration / 1000);
+  } catch (e) {}
+}
+const soundTick = () => beep(1500, 40, 'square');
+const soundStart = () => { beep(440, 100); setTimeout(() => beep(660, 100), 100); setTimeout(() => beep(880, 200), 200); };
+const soundEnd = () => { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 200), i * 150)); };
+
+// ============================================================
+// КОНТРОЛИ
+// ============================================================
+function startGame() {
+  socket.emit('start-game');
+  soundStart();
+}
+function skipQuestion() {
+  socket.emit('skip-question');
+}
+function resetGame() {
+  if (confirm('Сигурни ли сте? Всички играчи и резултати ще бъдат изтрити.')) {
+    socket.emit('reset-game');
+  }
+}
+
+// ============================================================
+// CSV ЕКСПОРТ
+// ============================================================
+let lastLog = [];
+let lastPlayers = [];
+function exportCSV() {
+  if (lastPlayers.length === 0 && lastLog.length === 0) {
+    alert('Няма данни за експорт.');
+    return;
+  }
+  let csv = '\uFEFF'; // BOM за кирилица в Excel
+  csv += 'КЛАСИРАНЕ\n';
+  csv += 'Място,Играч,Точки,Верни отговори\n';
+  const sorted = [...lastPlayers].sort((a, b) => b.score - a.score);
+  sorted.forEach((p, i) => {
+    csv += `${i + 1},"${p.name}",${p.score},${p.correctCount || 0}\n`;
+  });
+  csv += '\nЛОГ НА ОТГОВОРИТЕ\n';
+  csv += 'Играч,Въпрос,Резултат,Оставащо време (сек)\n';
+  lastLog.forEach(l => {
+    csv += `"${l.playerName}",${l.questionIndex},${l.correct ? 'Верен' : 'Грешен'},${l.timeLeft}\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `codeweek-escape-room-${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+}
+
+// ============================================================
+// SOCKET СЪБИТИЯ
+// ============================================================
+socket.on('players-update', (players) => {
+  lastPlayers = players;
+  document.getElementById('player-count').textContent = players.length;
+  document.getElementById('total-players').textContent = players.length;
+
+  // Списък с играчи
+  const el = document.getElementById('players-list');
+  el.innerHTML = players.map(p =>
+    `<span class="player-chip">👤 ${p.name} — ${p.score} т.</span>`
+  ).join('') || '<span style="color:#8b949e;">Очакване на играчи...</span>';
+
+  // Класиране
+  const sorted = [...players].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  const tbody = document.querySelector('#live-leaderboard tbody');
+  tbody.innerHTML = '';
+  sorted.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    if (i === 0) tr.className = 'top1';
+    else if (i === 1) tr.className = 'top2';
+    else if (i === 2) tr.className = 'top3';
+    tr.innerHTML = `<td>${i + 1}</td><td>${p.name}</td><td>${p.score}</td><td>${p.correctCount || 0}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('btn-start').disabled = players.length === 0;
+});
+
+socket.on('log-update', (log) => {
+  lastLog = log;
+  const tbody = document.querySelector('#log-table tbody');
+  tbody.innerHTML = '';
+  [...log].reverse().forEach(l => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${l.playerName}</td><td>${l.questionIndex}</td>
+      <td style="color:${l.correct ? '#00ff99' : '#ff4444'}">${l.correct ? '✅ Верен' : '❌ Грешен'}</td>
+      <td>${l.timeLeft}с</td>`;
+    tbody.appendChild(tr);
+  });
+});
+
+socket.on('question', (data) => {
+  updateCurrentQuestionOutline(data.index, true);
+  document.getElementById('current-q-text').textContent =
+    `Въпрос ${data.index + 1}/${data.total}: ${data.text}`;
+  document.getElementById('btn-skip').classList.remove('hidden');
+  document.getElementById('timer').textContent = data.timeLimit;
+  document.getElementById('timer').classList.remove('warning');
+  document.getElementById('status-msg').textContent = 'Играта е в ход...';
+  document.getElementById('answered-count').textContent = '0';
+});
+
+socket.on('timer', (time) => {
+  const el = document.getElementById('timer');
+  el.textContent = time;
+  if (time <= 5 && time > 0) { el.classList.add('warning'); soundTick(); }
+});
+
+socket.on('between-questions', () => {
+  document.getElementById('status-msg').textContent = '⏭ Следващ въпрос след 2 сек...';
+});
+
+socket.on('game-over', (sorted) => {
+  document.getElementById('status-msg').textContent = '🏁 Играта приключи!';
+  document.getElementById('btn-skip').classList.add('hidden');
+  soundEnd();
+});
+
+socket.on('game-reset', () => {
+  document.getElementById('status-msg').textContent = '🔄 Играта е нулирана.';
+  document.getElementById('btn-skip').classList.add('hidden');
+  document.getElementById('current-q-text').textContent = '—';
+  document.getElementById('timer').textContent = '—';
+  updateCurrentQuestionOutline(-1);
+  document.getElementById('players-list').innerHTML = '';
+  document.querySelector('#live-leaderboard tbody').innerHTML = '';
+  document.querySelector('#log-table tbody').innerHTML = '';
+});
+
+socket.on('error-msg', (msg) => {
+  document.getElementById('status-msg').textContent = '⚠ ' + msg;
+});
+</script>
+
+</body>
+</html>
