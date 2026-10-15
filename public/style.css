@@ -1,4 +1,399 @@
 /* ============================================================
+   ОСНОВНИ СТИЛОВЕ
+   ============================================================ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Verdana, sans-serif;
+  background: #0d1117;
+  color: #c9d1d9;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+header {
+  text-align: center;
+  padding: 24px 16px;
+  background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+  border-bottom: 1px solid #21262d;
+}
+
+header h1 {
+  color: #00ff99;
+  font-size: 1.8rem;
+  margin-bottom: 6px;
+}
+
+header p {
+  color: #8b949e;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+/* ============================================================
+   КОНТЕЙНЕР
+   ============================================================ */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   КАРТИ
+   ============================================================ */
+.card {
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.card.highlight {
+  border-color: #00ff99;
+  box-shadow: 0 0 20px rgba(0, 255, 153, 0.1);
+}
+
+.card h2 {
+  color: #00ff99;
+  font-size: 1.25rem;
+  margin-bottom: 14px;
+}
+
+.card h3 {
+  color: #c9d1d9;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+/* ============================================================
+   ТЕКСТ / INFO
+   ============================================================ */
+.info-line {
+  color: #8b949e;
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+}
+
+.text-center { text-align: center; }
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+
+/* ============================================================
+   INPUT
+   ============================================================ */
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  padding: 12px 16px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  color: #c9d1d9;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus {
+  outline: none;
+  border-color: #00ff99;
+  box-shadow: 0 0 0 3px rgba(0, 255, 153, 0.15);
+}
+
+/* ============================================================
+   БУТОНИ
+   ============================================================ */
+button {
+  background: #238636;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 4px;
+  transition: all 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  background: #2ea043;
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  background: #21262d;
+  color: #484f58;
+  cursor: not-allowed;
+}
+
+button.danger {
+  background: #da3633;
+}
+
+button.danger:hover:not(:disabled) {
+  background: #f85149;
+}
+
+/* ============================================================
+   СПИСЪК ИГРАЧИ
+   ============================================================ */
+.players-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.player-chip {
+  display: inline-block;
+  padding: 6px 14px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 20px;
+  color: #c9d1d9;
+  font-size: 0.9rem;
+}
+
+.player-chip.me {
+  border-color: #00ff99;
+  color: #00ff99;
+  background: rgba(0, 255, 153, 0.08);
+}
+
+/* ============================================================
+   ТАЙМЕР
+   ============================================================ */
+.timer {
+  text-align: center;
+  font-size: 3rem;
+  font-weight: bold;
+  color: #00ff99;
+  margin: 16px 0;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s ease;
+}
+
+.timer.warning {
+  color: #ff4444;
+  animation: pulse 0.5s infinite alternate;
+}
+
+@keyframes pulse {
+  from { transform: scale(1); }
+  to   { transform: scale(1.08); }
+}
+
+/* ============================================================
+   ОТГОВОРИ
+   ============================================================ */
+.answers {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.answer-btn {
+  width: 100%;
+  text-align: left;
+  background: #0d1117;
+  border: 2px solid #30363d;
+  color: #c9d1d9;
+  padding: 14px 20px;
+  font-size: 1rem;
+  font-weight: normal;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin: 0;
+}
+
+.answer-btn:hover:not(:disabled) {
+  border-color: #00ff99;
+  background: #161b22;
+  transform: translateX(4px);
+}
+
+.answer-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.answer-btn.correct {
+  background: rgba(0, 255, 153, 0.15);
+  border-color: #00ff99;
+  color: #00ff99;
+  font-weight: 600;
+}
+
+.answer-btn.selected {
+  border-color: #ffcc00;
+  background: rgba(255, 204, 0, 0.15);
+}
+
+/* ============================================================
+   КЛАСИРАНЕ (таблица)
+   ============================================================ */
+.leaderboard {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.leaderboard th,
+.leaderboard td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #21262d;
+}
+
+.leaderboard th {
+  color: #8b949e;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.leaderboard tbody tr:hover {
+  background: #1c2128;
+}
+
+.leaderboard .top1 {
+  background: rgba(255, 215, 0, 0.08);
+}
+.leaderboard .top1 td:first-child { color: #ffd700; font-weight: bold; }
+
+.leaderboard .top2 {
+  background: rgba(192, 192, 192, 0.08);
+}
+.leaderboard .top2 td:first-child { color: #c0c0c0; font-weight: bold; }
+
+.leaderboard .top3 {
+  background: rgba(205, 127, 50, 0.08);
+}
+.leaderboard .top3 td:first-child { color: #cd7f32; font-weight: bold; }
+
+/* ============================================================
+   QR КУТИЯ
+   ============================================================ */
+.qr-box {
+  display: inline-block;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  margin: 12px 0;
+}
+
+.qr-box img,
+.qr-box canvas {
+  display: block;
+}
+
+/* ============================================================
+   СКРИТИ / FADE-IN
+   ============================================================ */
+.hidden {
+  display: none !important;
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   ОПИС НА ВЪПРОСИТЕ (outline)
+   ============================================================ */
+.question-outline {
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.question-outline-item {
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-left: 3px solid #30363d;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 10px;
+  transition: all 0.2s ease;
+}
+
+.question-outline-item.is-current {
+  border-left-color: #00ff99;
+  background: #161b22;
+  box-shadow: 0 0 12px rgba(0, 255, 153, 0.1);
+}
+
+.question-outline-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.question-outline-heading h3 {
+  color: #00ff99;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.question-outline-current {
+  display: none;
+  padding: 2px 10px;
+  background: #00ff99;
+  color: #0d1117;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.question-outline-item.is-current .question-outline-current {
+  display: inline-block;
+}
+
+.question-outline-text {
+  color: #c9d1d9;
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+}
+
+.question-outline-answers {
+  padding-left: 24px;
+  color: #8b949e;
+  font-size: 0.9rem;
+}
+
+.question-outline-answers li {
+  margin-bottom: 4px;
+}
+
+/* ============================================================
    ЛИНК "НАЧАЛО" и бутон-линк
    ============================================================ */
 .back-link {
@@ -60,9 +455,73 @@
 }
 
 /* ============================================================
-   Избран отговор (преди feedback)
+   ИЗБОР НА РОЛЯ (index.html)
    ============================================================ */
-.answer-btn.selected {
-  border-color: #ffcc00;
-  background: rgba(255, 204, 0, 0.15);
+.role-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+@media (max-width: 600px) {
+  .role-grid { grid-template-columns: 1fr; }
+}
+
+.role-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 28px 16px;
+  background: #161b22;
+  border: 2px solid #21262d;
+  border-radius: 12px;
+  color: #c9d1d9;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  margin: 0;
+}
+
+.role-btn:hover {
+  border-color: #00ff99;
+  background: #1c2128;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 255, 153, 0.15);
+}
+
+.role-emoji {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.role-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #00ff99;
+}
+
+.role-desc {
+  font-size: 0.85rem;
+  color: #8b949e;
+}
+
+/* ============================================================
+   SCROLLBAR (тъмен)
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0d1117;
+}
+::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
 }
